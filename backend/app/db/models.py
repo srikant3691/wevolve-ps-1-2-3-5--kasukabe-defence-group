@@ -1,6 +1,6 @@
 """
 SQLAlchemy ORM Models for Wevolve
-Defines database schema for Candidates, Jobs, Skills, and Matches
+Defines database schema for Candidates, Jobs, and Skills
 """
 from sqlalchemy import Column, Integer, String, Float, Text, JSON, ForeignKey, Table, Boolean
 from sqlalchemy.orm import relationship
@@ -17,14 +17,6 @@ candidate_skills = Table(
     Column('candidate_id', Integer, ForeignKey('candidates.id'), primary_key=True),
     Column('skill_id', Integer, ForeignKey('skills.id'), primary_key=True),
     Column('proficiency_level', Integer, default=1)  # 1-5 scale
-)
-
-job_skills = Table(
-    'job_skills',
-    Base.metadata,
-    Column('job_id', Integer, ForeignKey('jobs.id'), primary_key=True),
-    Column('skill_id', Integer, ForeignKey('skills.id'), primary_key=True),
-    Column('is_required', Boolean, default=True)
 )
 
 
@@ -79,54 +71,23 @@ class Candidate(Base):
     skills = relationship("Skill", secondary=candidate_skills, backref="candidates")
 
 
-class Job(Base):
-    """Job posting for candidate matching"""
-    __tablename__ = "jobs"
+class JobPosting(Base):
+    """Job posting storage that mirrors jobs.json structure"""
+    __tablename__ = "job_postings"
     
     id = Column(Integer, primary_key=True, index=True)
-    
-    # Basic Info
     title = Column(String(200), nullable=False, index=True)
     company = Column(String(200), nullable=False)
     description = Column(Text)
-    
-    # Location
     location = Column(String(200))
     is_remote = Column(Boolean, default=False)
-    
-    # Compensation
     salary_min = Column(Integer)
     salary_max = Column(Integer)
-    
-    # Requirements
     min_experience_years = Column(Float, default=0)
     max_experience_years = Column(Float)
-    
-    # Relationships
-    required_skills = relationship("Skill", secondary=job_skills, backref="jobs")
+    required_skills = Column(JSON, default=[])
+    nice_to_have_skills = Column(JSON, default=[])
 
 
-class MatchResult(Base):
-    """Stored match results between candidates and jobs"""
-    __tablename__ = "match_results"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    candidate_id = Column(Integer, ForeignKey('candidates.id'), nullable=False)
-    job_id = Column(Integer, ForeignKey('jobs.id'), nullable=False)
-    
-    # Scores
-    total_score = Column(Float, nullable=False)
-    skills_score = Column(Float)
-    location_score = Column(Float)
-    salary_score = Column(Float)
-    experience_score = Column(Float)
-    role_score = Column(Float)
-    
-    # Details
-    matching_skills = Column(JSON, default=[])
-    missing_skills = Column(JSON, default=[])
-    match_explanation = Column(Text)
-    
-    # Relationships
-    candidate = relationship("Candidate", backref="matches")
-    job = relationship("Job", backref="matches")
+# Note: Job model removed to simplify according to user request.
+# Note: MatchResult model removed according to user request.
