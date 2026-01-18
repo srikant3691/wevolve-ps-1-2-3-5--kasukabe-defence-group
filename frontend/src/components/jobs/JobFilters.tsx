@@ -25,8 +25,8 @@ interface JobFiltersProps {
 }
 
 const locations = [
-  'San Francisco, CA', 'New York, NY', 'Seattle, WA', 'Austin, TX', 'Remote',
-  'Boston, MA', 'Los Angeles, CA', 'Chicago, IL', 'Denver, CO', 'Atlanta, GA'
+  'Bangalore', 'Hyderabad', 'Mumbai', 'Pune', 'Remote',
+  'Delhi', 'Chennai', 'Noida', 'Gurgaon', 'Kolkata'
 ];
 
 const allSkills = [
@@ -118,8 +118,8 @@ const JobFilters: React.FC<JobFiltersProps> = ({
       <div>
         <label
           className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${filters.showLikedOnly
-              ? 'bg-destructive/10 border-2 border-destructive/30'
-              : 'bg-muted/50 border-2 border-transparent hover:bg-muted'
+            ? 'bg-destructive/10 border-2 border-destructive/30'
+            : 'bg-muted/50 border-2 border-transparent hover:bg-muted'
             }`}
         >
           <Checkbox
@@ -132,8 +132,8 @@ const JobFilters: React.FC<JobFiltersProps> = ({
           <span className="font-medium flex-1">Liked Jobs</span>
           {savedJobs.length > 0 && (
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${filters.showLikedOnly
-                ? 'bg-destructive text-destructive-foreground'
-                : 'bg-muted-foreground/20 text-muted-foreground'
+              ? 'bg-destructive text-destructive-foreground'
+              : 'bg-muted-foreground/20 text-muted-foreground'
               }`}>
               {savedJobs.length}
             </span>
