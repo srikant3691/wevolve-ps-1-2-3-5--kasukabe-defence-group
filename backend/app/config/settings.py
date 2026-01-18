@@ -21,6 +21,8 @@ class Settings:
         "http://localhost:5173",  # Vite default
         "http://localhost:3000",  # CRA default
         "http://localhost:3001",  # Next.js on port 3001
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
     ]
     
     # Matching Engine Weights

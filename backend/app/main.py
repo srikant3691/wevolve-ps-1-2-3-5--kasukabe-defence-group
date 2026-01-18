@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import init_db
-from .routers import resume, matching, roadmap
+from .routers import resume, matching, roadmap, auth
 
 # ============================================================
 # Application Setup
@@ -41,6 +41,7 @@ app.add_middleware(
 app.include_router(resume.router)
 app.include_router(matching.router)
 app.include_router(roadmap.router)
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 
 
 # ============================================================

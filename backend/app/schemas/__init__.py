@@ -14,3 +14,11 @@ from .roadmap import (
     SkillNode, 
     LearningResource
 )
+from .auth import (
+    Token,
+    TokenData,
+    UserCreate,
+    UserUpdate,
+    ChangePassword,
+    UserOut
+)

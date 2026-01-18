@@ -2,7 +2,7 @@
 SQLAlchemy ORM Models for Wevolve
 Defines database schema for Candidates, Jobs, and Skills
 """
-from sqlalchemy import Column, Integer, String, Float, Text, JSON, ForeignKey, Table, Boolean
+from sqlalchemy import Column, Integer, String, Float, Text, JSON, ForeignKey, Table, Boolean, SmallInteger
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -88,6 +88,35 @@ class JobPosting(Base):
     max_experience_years = Column(Float)
     required_skills = Column(JSON, default=[])
     nice_to_have_skills = Column(JSON, default=[])
+
+
+# =========
+#Auth
+#==========
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    
+    # Profile information
+    city = Column(String, nullable=True)
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+    
+    # Photo paths (strings)
+    profile_photo = Column(String, nullable=True)
+    cover_photo = Column(String, nullable=True)
+    
+    # Required for your register endpoint
+    device_id = Column(String, default="A1:B2:C3:D4:E5:F6")
+    
+    # Required for your login/delete logic
+    # Using SmallInteger (0 or 1) for SQLite compatibility
+    is_deleted = Column(SmallInteger, default=0)
 
 
 # Note: Job model removed to simplify according to user request.

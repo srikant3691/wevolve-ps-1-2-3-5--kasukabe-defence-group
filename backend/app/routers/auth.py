@@ -9,8 +9,9 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
-from .. import models, schemas
-from ..database import get_db, engine
+from ..db import models
+from .. import schemas
+from ..db.database import get_db, engine
 
 load_dotenv()
 

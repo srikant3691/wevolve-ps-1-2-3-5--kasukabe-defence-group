@@ -52,9 +52,7 @@ const Header: React.FC<HeaderProps> = ({
             >
               <Sparkles className="w-5 h-5 text-primary-foreground" />
             </motion.div>
-            <span className="text-xl font-bold text-foreground">
-              AI Career <span className="text-primary">Co-Pilot</span>
-            </span>
+            <span className="text-xl font-bold text-foreground">Wevolve</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -87,13 +85,15 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Theme Toggle & Mobile Menu */}
           <div className="flex items-center gap-8">
-            <Button
-              variant="default"
-              size="sm"
-              className="hidden md:flex font-semibold px-6"
-            >
-              Sign Up
-            </Button>
+            <Link href="/auth/register">
+              <Button
+                variant="default"
+                size="sm"
+                className="hidden md:flex font-semibold px-6"
+              >
+                Sign Up
+              </Button>
+            </Link>
             <Button
               variant="ghost"
               size="icon"
