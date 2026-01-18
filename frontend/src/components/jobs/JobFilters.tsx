@@ -7,6 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { useSavedJobs } from '@/contexts/SavedJobsContext';
 
+
 export interface FilterState {
   locations: string[];
   experience: [number, number];
