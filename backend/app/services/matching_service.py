@@ -1,14 +1,15 @@
 """
 Matching Engine Service
-Handles job-candidate matching with explainable scores
+Handles job-candidate matching with fuzzy string comparison and explainable scores
 """
 from typing import List, Tuple, Optional
+from thefuzz import process, fuzz
 
 from ..config import settings
 
 
 class MatchingEngine:
-    """Service for calculating job-candidate match scores"""
+    """Service for calculating job-candidate match scores using fuzzy matching"""
     
     # City aliases for location matching
     CITY_ALIASES = {
@@ -23,195 +24,158 @@ class MatchingEngine:
         {'bangalore', 'bengaluru', 'mysore'},
     ]
     
-    # Role families for matching
-    ROLE_FAMILIES = {
-        'backend': ['python', 'java', 'node', 'api', 'server', 'backend'],
-        'frontend': ['react', 'angular', 'vue', 'ui', 'ux', 'frontend', 'web'],
-        'fullstack': ['full stack', 'fullstack', 'full-stack'],
-        'data': ['data engineer', 'data scientist', 'ml', 'machine learning', 'analytics'],
-        'devops': ['devops', 'sre', 'infrastructure', 'platform', 'cloud'],
-        'mobile': ['ios', 'android', 'mobile', 'flutter', 'react native'],
-    }
-    
     def __init__(self):
-        self.weights = settings.MATCHING_WEIGHTS
+        # We use a threshold of 85 for fuzzy matches as established in job_matching.py
+        self.MATCH_THRESHOLD = 85
+        self.weights = {
+            "skill": 0.4,
+            "location": 0.2,
+            "salary": 0.15,
+            "experience": 0.15,
+            "role": 0.1
+        }
     
     def calculate_skills_score(
         self, candidate_skills: List[str], required_skills: List[str],
         optional_skills: List[str] = []
     ) -> Tuple[float, List[str], List[str], List[str]]:
-        """Calculate skills match score. Returns (score, matching, missing_req, missing_opt)"""
-        candidate_lower = {s.lower() for s in candidate_skills}
-        required_lower = {s.lower() for s in required_skills}
-        optional_lower = {s.lower() for s in optional_skills}
+        """
+        Calculate skills match score using fuzzy matching.
+        Returns (score, matching_all, missing_req, missing_opt)
+        """
+        if not required_skills and not optional_skills:
+            return 100.0, [], [], []
+
+        matched_req = []
+        missing_req = []
+        for req in required_skills:
+            match = process.extractOne(req, candidate_skills, scorer=fuzz.token_set_ratio)
+            if match and match[1] >= self.MATCH_THRESHOLD:
+                matched_req.append(req)
+            else:
+                missing_req.append(req)
         
-        matching_required = candidate_lower & required_lower
-        matching_optional = candidate_lower & optional_lower
-        missing_required = list(required_lower - candidate_lower)
-        missing_optional = list(optional_lower - candidate_lower)
-        matching = list(matching_required | matching_optional)
+        matched_opt = []
+        missing_opt = []
+        for opt in optional_skills:
+            match = process.extractOne(opt, candidate_skills, scorer=fuzz.token_set_ratio)
+            if match and match[1] >= self.MATCH_THRESHOLD:
+                matched_opt.append(opt)
+            else:
+                missing_opt.append(opt)
         
-        if not required_skills:
-            return 100.0, [s.title() for s in matching], missing_required, missing_optional
+        # Calculate scores
+        # If no required skills, req_score is 100
+        req_score = (len(matched_req) / len(required_skills) * 100) if required_skills else 100.0
+        # If no optional skills, opt_score is 100
+        opt_score = (len(matched_opt) / len(optional_skills) * 100) if optional_skills else 100.0
         
-        req_score = (len(matching_required) / len(required_skills)) * 100
-        opt_score = (len(matching_optional) / len(optional_skills)) * 100 if optional_skills else 0
+        # Weighted skill score: 80% required, 20% optional (internal service weight)
+        skill_score = (req_score * 0.8) + (opt_score * 0.2)
         
-        score = (req_score * 0.8) + (opt_score * 0.2)
-        return score, [s.title() for s in matching], missing_required, missing_optional
-    
+        return skill_score, matched_req + matched_opt, missing_req, missing_opt
+
     def calculate_location_score(
-        self, candidate_location: str, job_location: str, is_remote: bool
+        self, candidate_locations: List[str], job_location: str
     ) -> float:
-        """Calculate location match score"""
-        if is_remote or 'remote' in job_location.lower():
+        """Calculate location match score. candidate_locations is a list (from schema)"""
+        if not candidate_locations or not job_location:
+            return 0.0
+            
+        if any(job_location in loc for loc in candidate_locations):
             return 100.0
+            
+        # Check aliases and groups
+        normalized_job = self.CITY_ALIASES.get(job_location.lower(), job_location.lower())
         
-        if not candidate_location or not job_location:
-            return 50.0
+        for loc in candidate_locations:
+            normalized_loc = self.CITY_ALIASES.get(loc.lower(), loc.lower())
+            if normalized_loc == normalized_job:
+                return 100.0
+                
+            for group in self.NEARBY_GROUPS:
+                if normalized_loc in group and normalized_job in group:
+                    return 80.0
         
-        cand = self.CITY_ALIASES.get(candidate_location.lower(), candidate_location.lower())
-        job = self.CITY_ALIASES.get(job_location.lower(), job_location.lower())
-        
-        if cand == job:
-            return 100.0
-        
-        for group in self.NEARBY_GROUPS:
-            if cand in group and job in group:
-                return 80.0
-        
-        return 30.0
-    
+        return 0.0
+
     def calculate_salary_score(
-        self, expected_min: Optional[int], expected_max: Optional[int],
-        job_min: Optional[int], job_max: Optional[int]
+        self, expected_salary: int, job_min: int, job_max: int
     ) -> float:
         """Calculate salary match score"""
-        if not job_min and not job_max:
-            return 60.0
-        if not expected_min and not expected_max:
-            return 70.0
-        
-        expected_mid = ((expected_min or 0) + (expected_max or expected_min or 0)) / 2
-        job_mid = ((job_min or 0) + (job_max or job_min or 0)) / 2
-        
-        if expected_mid == 0:
-            return 70.0
-        if job_mid >= expected_mid:
+        if job_min <= expected_salary <= job_max:
             return 100.0
         
-        ratio = job_mid / expected_mid
-        if ratio >= 0.9:
-            return 90.0
-        elif ratio >= 0.8:
-            return 75.0
-        elif ratio >= 0.7:
-            return 60.0
-        return max(30.0, ratio * 100)
-    
+        if expected_salary < job_min:
+            return max(0, 100 - (abs(expected_salary - job_min) / job_min * 100))
+        else:
+            return max(0, 100 - (abs(expected_salary - job_max) / job_max * 100))
+
     def calculate_experience_score(
-        self, candidate_years: float, job_min_years: float,
-        job_max_years: Optional[float] = None
+        self, candidate_years: float, min_exp: float
     ) -> float:
         """Calculate experience match score"""
-        if job_min_years == 0:
+        if candidate_years >= min_exp:
             return 100.0
-        
-        if job_max_years:
-            if job_min_years <= candidate_years <= job_max_years:
-                return 100.0
-            if candidate_years > job_max_years:
-                return max(60.0, 100 - (candidate_years - job_max_years) * 5)
-        elif candidate_years >= job_min_years:
-            return 100.0
-        
-        if candidate_years < job_min_years:
-            return max(20.0, (candidate_years / job_min_years) * 100)
-        
-        return 70.0
-    
-    def calculate_role_score(self, target_role: Optional[str], job_title: str) -> float:
-        """Calculate role match score"""
-        if not target_role:
-            return 70.0
-        
-        target = target_role.lower()
-        job = job_title.lower()
-        
-        if target in job or job in target:
-            return 100.0
-        
-        for family, keywords in self.ROLE_FAMILIES.items():
-            if any(kw in target for kw in keywords):
-                if any(kw in job for kw in keywords):
-                    return 85.0
-        
-        seniority = ['senior', 'lead', 'principal', 'staff', 'junior', 'associate']
-        target_sen = next((kw for kw in seniority if kw in target), None)
-        job_sen = next((kw for kw in seniority if kw in job), None)
-        
-        if target_sen and job_sen and target_sen == job_sen:
-            return 75.0
-        
-        return 50.0
-    
-    def calculate_total_score(
-        self, skills: float, location: float, salary: float,
-        experience: float, role: float
-    ) -> float:
-        """Calculate weighted total score"""
-        return round(
-            skills * self.weights['skills'] +
-            location * self.weights['location'] +
-            salary * self.weights['salary'] +
-            experience * self.weights['experience'] +
-            role * self.weights['role'],
-            1
+        return (candidate_years / min_exp * 100) if min_exp > 0 else 100.0
+
+    def calculate_role_score(self, preferred_roles: List[str], job_title: str) -> float:
+        """Calculate role match score using fuzzy matching"""
+        if not preferred_roles or not job_title:
+            return 70.0 # Neutral score
+            
+        role_match_result = process.extractOne(job_title, preferred_roles, scorer=fuzz.token_set_ratio)
+        return role_match_result[1] if role_match_result else 0.0
+
+    def calculate_total_score(self, breakdown: dict) -> float:
+        """Calculate weighted total score based on the established 0.4, 0.2, 0.15, 0.15, 0.1 weights"""
+        total = (
+            breakdown['skill_match'] * self.weights['skill'] +
+            breakdown['location_match'] * self.weights['location'] +
+            breakdown['salary_match'] * self.weights['salary'] +
+            breakdown['experience_match'] * self.weights['experience'] +
+            breakdown['role_match'] * self.weights['role']
         )
-    
+        return round(total, 1)
+
     @staticmethod
     def get_match_tier(score: float) -> str:
         """Convert score to tier label"""
-        if score >= settings.MATCH_TIERS['excellent']:
+        if score >= settings.MATCH_TIERS.get('excellent', 85):
             return "Excellent Match ⭐"
-        elif score >= settings.MATCH_TIERS['good']:
+        elif score >= settings.MATCH_TIERS.get('good', 70):
             return "Good Match ✓"
-        elif score >= settings.MATCH_TIERS['fair']:
+        elif score >= settings.MATCH_TIERS.get('fair', 50):
             return "Fair Match"
         return "Poor Match"
-    
-    def generate_explanation(self, breakdown: dict) -> Tuple[str, str, str]:
+
+    def generate_explanation(self, result: dict) -> Tuple[str, str, str]:
         """Generate human-readable explanation, top strength, and improvement area"""
+        # This mirrors the logic in the router but works on the returned dict
+        breakdown = result['breakdown']
         scores = {
-            'Skills': breakdown['skills_score'],
-            'Location': breakdown['location_score'],
-            'Salary': breakdown['salary_score'],
-            'Experience': breakdown['experience_score'],
-            'Role': breakdown['role_score']
+            'Skills': breakdown['skill_match'],
+            'Location': breakdown['location_match'],
+            'Salary': breakdown['salary_match'],
+            'Experience': breakdown['experience_match'],
+            'Role': breakdown['role_match']
         }
         
         best = max(scores, key=scores.get)
         worst = min(scores, key=scores.get)
         
         parts = []
-        if breakdown['skills_score'] >= 80:
-            parts.append(f"Strong skills alignment ({int(breakdown['skill_match_percentage'])}% match)")
-        elif breakdown.get('missing_required_skills'):
-            missing = ', '.join(breakdown['missing_required_skills'][:3])
+        if breakdown['skill_match'] >= 80:
+            parts.append("Strong skills alignment")
+        elif result.get('missing_skills'):
+            missing = ', '.join(result['missing_skills'][:3])
             parts.append(f"Missing key skills: {missing}")
         
-        if breakdown['location_score'] == 100:
+        if breakdown['location_match'] == 100:
             parts.append("Location is a perfect fit")
-        elif breakdown['location_score'] < 50:
-            parts.append("Location may require relocation")
         
-        if breakdown['salary_score'] >= 90:
+        if breakdown['salary_match'] >= 90:
             parts.append("Salary expectations align well")
-        
-        if breakdown['experience_score'] >= 90:
-            parts.append("Experience level matches requirements")
-        elif breakdown['experience_score'] < 60:
-            parts.append("May need more experience for this role")
         
         explanation = ". ".join(parts) + "." if parts else "Match score calculated based on profile data."
         top_reason = f"{best} ({int(scores[best])}%)"
@@ -220,5 +184,5 @@ class MatchingEngine:
             improve = f"Improve your {worst.lower()} match (currently {int(scores[worst])}%)"
         else:
             improve = "All factors are well-matched!"
-        
+            
         return explanation, top_reason, improve

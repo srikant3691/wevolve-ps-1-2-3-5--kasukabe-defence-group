@@ -1,7 +1,3 @@
-"""
-Database Configuration for Wevolve
-SQLite for development (easily migratable to PostgreSQL)
-"""
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -22,10 +18,7 @@ Base = declarative_base()
 
 
 def get_db():
-    """
-    FastAPI dependency that provides a database session.
-    Ensures cleanup after each request.
-    """
+
     db = SessionLocal()
     try:
         yield db

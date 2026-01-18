@@ -11,18 +11,18 @@ with open(jobs_path, "r") as f:
     jobs = data.get("jobs", [])
 
 
-candidate =  {
-    "skills": ["Python3", "FastAPI", "Docker", "ReactJS"], 
-    "experience_years": 1, 
-    "preferred_locations": ["Bangalore", "Hyderabad"], 
-    "preferred_roles": ["Backend Developer", "Full Stack Developer"], 
-    "expected_salary": 800000, 
-    "education": { 
-      "degree": "B.Tech", 
-      "field": "Computer Science", 
-      "cgpa": 8.5 
-    } 
-}
+# candidate =  {
+#     "skills": ["Python3", "FastAPI", "Docker", "ReactJS"], 
+#     "experience_years": 1, 
+#     "preferred_locations": ["Bangalore", "Hyderabad"], 
+#     "preferred_roles": ["Backend Developer", "Full Stack Developer"], 
+#     "expected_salary": 800000, 
+#     "education": { 
+#       "degree": "B.Tech", 
+#       "field": "Computer Science", 
+#       "cgpa": 8.5 
+#     } 
+# }
 
 
 def calculate_match(candidate, job):
