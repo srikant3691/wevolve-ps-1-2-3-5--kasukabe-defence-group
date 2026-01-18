@@ -4,7 +4,7 @@ import { X, MapPin, Briefcase, Clock, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
+
 
 export interface FilterState {
   locations: string[];

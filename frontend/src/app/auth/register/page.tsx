@@ -87,7 +87,7 @@ export default function RegisterPage() {
               <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
               <Input
                 id="name"
-                placeholder="John Doe"
+                placeholder="Full Name"
                 className="pl-10 h-11 bg-background/50"
                 {...form.register("name")}
               />
@@ -105,7 +105,7 @@ export default function RegisterPage() {
               <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
               <Input
                 id="email"
-                placeholder="name@example.com"
+                placeholder="Email"
                 type="email"
                 className="pl-10 h-11 bg-background/50"
                 {...form.register("email")}
@@ -124,7 +124,7 @@ export default function RegisterPage() {
               <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
               <Input
                 id="password"
-                placeholder="Create a strong password"
+                placeholder="Password"
                 type="password"
                 className="pl-10 h-11 bg-background/50"
                 {...form.register("password")}
